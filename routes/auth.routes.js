@@ -1,9 +1,11 @@
-const { Router } = require('express')
+const { Router, response } = require('express')
 const bcrypt = require('bcryptjs')
 const config = require('config')
 const jwt = require('jsonwebtoken')
 const { check, validationResult } = require('express-validator')
+const request = require('request')
 const User = require('../models/User')
+const authYandex = require('../middleware/authYandex.middleware')
 const router = Router()
 
 // /api/auth/register
@@ -44,7 +46,8 @@ router.post(
         } catch (e) { 
             res.status(500).json({ message: 'Что-то пошло не так, попробуйте снова'})
         }
-})
+    }
+)
 
 // /api/auth/login
 router.post(
@@ -91,6 +94,97 @@ router.post(
             res.status(500).json({ message: 'Что-то пошло не так, попробуйте снова' })
         }       
 
-})
+    }
+)
+
+// /api/auth/loginYandex
+router.get(
+    '/loginYandex',
+    async (req, res) => {
+        try {
+            
+            res.json({
+                url: `https://oauth.yandex.ru/authorize?response_type=code&client_id=${config.get('yandexClientId')}` });
+
+        } catch (e) {
+            res.status(500).json({ message: 'Что-то пошло не так, попробуйте снова' })
+        }
+    }
+)
+
+
+// /api/auth/yandexToken
+router.post(
+    '/yandexToken',
+    authYandex,
+    async (req, res) => {
+        try { 
+
+            request.post(
+                {
+                    url: 'https://oauth.yandex.ru/token',
+                    form: {
+                        grant_type: 'authorization_code',
+                        code: req.body.yandexCode,
+                    },
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Authorization': "Basic " + Buffer.from(config.get('yandexClientId') + ':' + config.get('jwtYandexSecret')).toString('base64')
+                    }
+                },
+                (err, response, body) => {
+                    if (err) return res.status(500).send({ message: err })
+
+                    
+                    return res.send(body)
+                }
+            )      
+
+        } catch (e) {
+            res.status(500).json({ message: 'Что-то пошло не так, попробуйте снова' })
+        }
+    }
+)
+
+// /api/auth/yandexInfoUser
+router.get(
+    '/yandexInfoUser',
+    async (req, res) => {
+        try {
+            
+            request.get(
+                {
+                    url: 'https://login.yandex.ru/info?format=json',
+                    headers: {
+                        'Authorization': `OAuth ${req.headers['authorization']}`
+                    }
+                },
+                async (err, response, body) => {
+                    if (err) return res.status(500).send({ message: err })
+
+                    const email = JSON.parse(body).default_email;
+                    const candidate = await User.findOne({ email: email })
+
+                    if (candidate) {
+                        console.log('Такой пользователь уже существует')
+                        return res.send(body)
+                    }
+
+                    const hashedPassword = await bcrypt.hash('123456', 12);
+                    const user = new User({ email: email, password: hashedPassword });
+
+                    await user.save()
+
+                    console.log('Пользователь создан')
+
+                    return res.send(body)
+                }
+            )
+
+        } catch (e) {
+            res.status(500).json({ message: 'Что-то пошло не так, попробуйте снова' })
+        }
+    }
+)
 
 module.exports = router

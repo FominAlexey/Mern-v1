@@ -2,28 +2,39 @@ import React, { useContext, useEffect, useState } from 'react';
 import { useHttp } from '../hooks/http.hook';
 import { useMessage } from './../hooks/message.hook';
 import { AuthContext } from './../context/AuthContext';
+import { useLocation } from "react-router-dom";
 
 export const AuthPage = () => {
+    const search = useLocation().search;
+    const code = new URLSearchParams(search).get('code');
     const auth = useContext(AuthContext)
     const message = useMessage();
-    const {loading, request, error, clearError} = useHttp()
+    const { loading, request, error, clearError } = useHttp()
     const [form, setFrom] = useState({
         email: '',
         password: ''
     })
+    const [yandexCode, setYandexCode] = useState(null);
 
     useEffect(() => {
         message(error);
         clearError();
     }, [error, message, clearError])
 
-    useEffect(() => { 
+    useEffect(() => {
         window.M.updateTextFields()
     }, [])
 
     const changeHandler = event => {
-        setFrom({...form, [event.target.name]: event.target.value})
+        setFrom({ ...form, [event.target.name]: event.target.value })
     }
+
+    useEffect(() => {
+        setYandexCode(code)
+        if (yandexCode) {
+            _loginYandexAuthorization(); 
+        }
+    }, [yandexCode, code])
 
     const registerHandler = async () => {
         try {
@@ -39,9 +50,31 @@ export const AuthPage = () => {
         try {
             const data = await request('/api/auth/login', 'POST', { ...form })
             auth.login(data.token, data.userId)
+            message(`Вы вошли под userId: ${data.userId}`)
             console.log('Data', data)
         } catch (e) {
 
+        }
+    }
+
+    const loginYandexHandler = async () => { 
+        try {
+            const yandexCode = await request('/api/auth/loginYandex', 'GET', null) 
+            window.location.assign(`${yandexCode.url}`);
+        } catch (e) {
+        }
+    }
+
+    const _loginYandexAuthorization = async () => {
+        try {
+            const yandexToken = await request('/api/auth/yandexToken', 'POST', { yandexCode });
+            if (yandexToken.access_token) {
+                const yandexInfoUser = await request('/api/auth/yandexInfoUser', 'GET', null, { 'Authorization': `${yandexToken.access_token}` });
+                auth.login(null, null,yandexToken.access_token)
+                message(`Вы вошли под email: ${yandexInfoUser.default_email}`)
+                return message(`У вас стандартный пароль: 123456`)
+            }
+        } catch (e) {
         }
     }
 
@@ -93,10 +126,18 @@ export const AuthPage = () => {
                         </button>
                         <button
                             className='btn grey lighten-1 black-text'
+                            style={{ marginRight: 10 }}
                             onClick={registerHandler}
                             disabled={loading}
                         >
                             Регистрация
+                        </button>
+                        <button
+                            className='btn red darken-4'
+                            disabled={loading}
+                            onClick={loginYandexHandler}
+                        >
+                            Яндекс
                         </button>
                     </div>
                 </div>

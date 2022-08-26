@@ -8,8 +8,8 @@ import { Loader } from './components/Loader';
 import 'materialize-css'
 
 function App() {
-  const {token, login, logout, userId, ready} = useAuth()
-  const isAuthenticated = !!token
+  const { token, yandexToken, login, logout, userId, ready } = useAuth()
+  const isAuthenticated = !!token || !!yandexToken
   const routes = useRoutes(isAuthenticated)
 
   if (!ready) {
@@ -18,7 +18,7 @@ function App() {
   
   return (
     <AuthContext.Provider value={{
-      token, login, logout, userId, isAuthenticated
+      token, yandexToken, login, logout, userId, isAuthenticated
     }}>
       <Router>
         {isAuthenticated && <Navbar/>}
