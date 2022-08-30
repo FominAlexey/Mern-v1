@@ -3,7 +3,7 @@
     "jwtSecret": "aleksey MERN",
     "mongoUri": "mongodb+srv://aleksey:123qwe@cluster0.hxfhl9b.mongodb.net/app?retryWrites=true&w=majority",
     "baseUrl": "http://localhost:5000",
-    "jwtYandexSecret": "1a745591f2ad405d9d21a4daf2f02196",
+    "jwtYandexSecret": "7d98a1523a774ba893f3944618907204",
     "yandexClientId": "2f89241208454f22b6815f94c86b1c8a",
     "redirectUrl": "http://localhost:3000/api/auth/login"
 }

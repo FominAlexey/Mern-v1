@@ -60,7 +60,10 @@ export const AuthPage = () => {
     const loginYandexHandler = async () => { 
         try {
             const yandexCode = await request('/api/auth/loginYandex', 'GET', null) 
-            window.location.assign(`${yandexCode.url}`);
+            if (yandexCode) {
+                window.location.assign(`${yandexCode.url}`);
+            }
+           
         } catch (e) {
         }
     }
@@ -69,10 +72,15 @@ export const AuthPage = () => {
         try {
             const yandexToken = await request('/api/auth/yandexToken', 'POST', { yandexCode });
             if (yandexToken.access_token) {
-                const yandexInfoUser = await request('/api/auth/yandexInfoUser', 'GET', null, { 'Authorization': `${yandexToken.access_token}` });
-                auth.login(null, null,yandexToken.access_token)
-                message(`Вы вошли под email: ${yandexInfoUser.default_email}`)
-                return message(`У вас стандартный пароль: 123456`)
+                const yandexInfoUser = await request('/api/auth/yandexInfoUser', 'GET', null, { 'Authorization': `YandexOAuth ${yandexToken.access_token}` });
+                if (yandexToken.access_token) {
+                    form.email = yandexInfoUser.default_email;
+                    form.password = '123456';
+                    const data = await request('/api/auth/login', 'POST', { ...form })
+                    auth.login(data.token, data.userId)
+                    message(`Вы вошли под userId: ${data.userId}`)
+                    console.log('Data', data)
+                }
             }
         } catch (e) {
         }

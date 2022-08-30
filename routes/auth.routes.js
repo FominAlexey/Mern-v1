@@ -156,7 +156,7 @@ router.get(
                 {
                     url: 'https://login.yandex.ru/info?format=json',
                     headers: {
-                        'Authorization': `OAuth ${req.headers['authorization']}`
+                        'Authorization': `OAuth ${req.headers.authorization.split(' ')[1]}`
                     }
                 },
                 async (err, response, body) => {
